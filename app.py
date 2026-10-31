@@ -1,4 +1,4 @@
-﻿
+
 import hashlib
 import sqlite3
 import uuid
@@ -610,7 +610,6 @@ ROLE_LABELS = {
     "Judicial Authority": "Judicial Reviewer",
 }
 
-initialize_database()
 initialize_auth_database()
 
 
