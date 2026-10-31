@@ -1,19 +1,55 @@
+# --- Python / environments ---
 .venv/
+venv/
+env/
 __pycache__/
 *.pyc
 
+# --- Secrets (never commit) ---
 .env
+.env.*
 .streamlit/secrets.toml
 
-data/evidence_store/
+# --- Private data: database, evidence, reports ---
+/data/
 *.db
+*.db-journal
+*.sqlite
 
+# --- Model weights (562 MB; distributed via GitHub Releases, see README) ---
 *.pt
 *.pth
+*.part
 
+# --- Images (evidence and test outputs) ---
 *.jpg
 *.jpeg
 *.png
 *.webp
 
+# --- Old backups and one-off development scripts ---
+backups/
+test_images/
+*.bak
+*.bak-*
+*.bak_*
+*.before-ui
+*.ui-backup
+app_backup_*.py
+app_before_*.py
+app_checkpoint_*.py
+patch_*.py
+test_mvss*.py
+test_output.png
+
+# --- Build output / editors / OS ---
+dist/
+.idea/
+.vscode/
 .DS_Store
+Thumbs.db
+
+# Local MVSS training datasets
+/ml/mvss/data/DEFACTO84k-train.txt
+/ml/mvss/data/CASIAv2_edgemap.zip
+/ml/mvss/data/edge_mask.zip
