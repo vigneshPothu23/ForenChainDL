@@ -1,6 +1,7 @@
 
 import hashlib
 import hmac
+import os
 import secrets
 import sqlite3
 
@@ -131,8 +132,24 @@ def initial_admin_required() -> bool:
     return count == 0
 
 
-def create_initial_admin(username: str, password: str):
-    """Create the first administrator only when no administrator exists."""
+SETUP_TOKEN_ENV = "FORENCHAIN_SETUP_TOKEN"
+
+
+def setup_token_configured() -> bool:
+    """True when a first-run setup token is set (environment variable or Streamlit secret)."""
+    return bool(os.environ.get(SETUP_TOKEN_ENV, "").strip())
+
+
+def create_initial_admin(username: str, password: str, setup_token=None):
+    """Create the first administrator only when no administrator exists.
+
+    When FORENCHAIN_SETUP_TOKEN is configured, the matching token is required,
+    so a public deployment cannot be claimed by whoever opens it first.
+    """
+
+    expected = os.environ.get(SETUP_TOKEN_ENV, "").strip()
+    if expected and not hmac.compare_digest(str(setup_token or "").strip(), expected):
+        raise PermissionError("Invalid setup token.")
 
     initialize_auth_database()
 

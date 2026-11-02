@@ -17,6 +17,7 @@ from forenchain.auth import (
     has_permission,
     initial_admin_required,
     initialize_auth_database,
+    setup_token_configured,
 )
 from forenchain.custody import (
     get_custody_history,
@@ -32,8 +33,13 @@ from forenchain.evidence_store import (
 )
 from forenchain.forensics import MVSSForensics
 from forenchain.integrity import verify_evidence
-from forenchain.analysis_history import save_analysis, save_examiner_finding
+from forenchain.analysis_history import (
+    initialize_findings_database,
+    save_analysis,
+    save_examiner_finding,
+)
 from forenchain.forensic_report import build_forensic_report_pdf
+from forenchain.report_finalization import initialize_report_finalization
 
 
 st.set_page_config(
@@ -611,8 +617,12 @@ ROLE_LABELS = {
     "Judicial Authority": "Judicial Reviewer",
 }
 
-initialize_auth_database()
-initialize_custody()
+# Create every table on a fresh deployment. Each call is idempotent
+# (CREATE ... IF NOT EXISTS), so existing databases and records are untouched.
+initialize_auth_database()          # data/ folders, evidence, users (+ must_change_password column)
+initialize_custody()                # custody_events (+ index)
+initialize_findings_database()      # analysis_records, examiner_findings
+initialize_report_finalization()    # report_finalizations, report_audit_log (+ append-only triggers)
 
 
 def query_all(sql, params=()):
@@ -1153,9 +1163,20 @@ def show_recent_evidence(user):
 
 def first_admin_setup():
     st.title("ForenChain-DL - Initial Setup")
+
+    # FC_SETUP_TOKEN_GATE: a public deployment cannot be claimed by its first visitor.
+    if not setup_token_configured():
+        st.error(
+            "Initial setup is locked. Set FORENCHAIN_SETUP_TOKEN (environment variable, "
+            "or Streamlit Cloud > App settings > Secrets), restart the app, then enter "
+            "that token here to create the first administrator."
+        )
+        return
+
     st.info("Create the first Platform Administrator account.")
 
     with st.form("initial_admin_form"):
+        setup_token = st.text_input("Setup token", type="password")
         username = st.text_input("Administrator username")
         password = st.text_input("Password", type="password")
         confirm = st.text_input("Confirm password", type="password")
@@ -1169,7 +1190,7 @@ def first_admin_setup():
             st.error("Passwords do not match.")
         else:
             try:
-                create_initial_admin(username, password)
+                create_initial_admin(username, password, setup_token)
                 st.success("Administrator created. Please sign in.")
                 st.rerun()
             except (ValueError, PermissionError) as exc:

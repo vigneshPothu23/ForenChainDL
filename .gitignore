@@ -9,6 +9,7 @@ __pycache__/
 .env
 .env.*
 .streamlit/secrets.toml
+!.streamlit/secrets.toml.example
 
 # --- Private data: database, evidence, reports ---
 /data/
