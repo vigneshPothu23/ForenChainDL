@@ -20,6 +20,7 @@ from forenchain.auth import (
 )
 from forenchain.custody import (
     get_custody_history,
+    initialize_custody,
     record_custody_event,
     verify_custody_chain,
 )
@@ -611,6 +612,7 @@ ROLE_LABELS = {
 }
 
 initialize_auth_database()
+initialize_custody()
 
 
 def query_all(sql, params=()):
