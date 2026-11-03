@@ -13,10 +13,12 @@ from forenchain.auth import (
     authenticate_user,
     change_password,
     create_initial_admin,
+    DEMO_USERS_SECRET,
     create_user,
     has_permission,
     initial_admin_required,
     initialize_auth_database,
+    seed_demo_users,
     setup_token_configured,
 )
 from forenchain.custody import (
@@ -623,6 +625,31 @@ initialize_auth_database()          # data/ folders, evidence, users (+ must_cha
 initialize_custody()                # custody_events (+ index)
 initialize_findings_database()      # analysis_records, examiner_findings
 initialize_report_finalization()    # report_finalizations, report_audit_log (+ append-only triggers)
+
+
+def demo_users_from_secrets():
+    """Demo accounts from Streamlit Secrets ([[FORENCHAIN_DEMO_USERS]]). Empty if not set."""
+    try:
+        entries = st.secrets.get(DEMO_USERS_SECRET)
+    except Exception:
+        return []
+    if not entries:
+        return []
+    if isinstance(entries, dict):
+        entries = [entries]
+    return [
+        {key: entry.get(key, "") for key in ("username", "role", "password")}
+        for entry in entries
+    ]
+
+
+# On an empty database (fresh server, reboot, redeploy) create the demo accounts
+# from Secrets. Does nothing once any account exists.
+DEMO_SEED_ERROR = None
+try:
+    seed_demo_users(demo_users_from_secrets())
+except ValueError as exc:
+    DEMO_SEED_ERROR = str(exc)
 
 
 def query_all(sql, params=()):
@@ -3412,6 +3439,8 @@ def _fc_responsive_css():
 
 def main():
     _fc_responsive_css()
+    if DEMO_SEED_ERROR:
+        st.error(f"Demo accounts were not created: {DEMO_SEED_ERROR}")
     if initial_admin_required():
         first_admin_setup()
         return

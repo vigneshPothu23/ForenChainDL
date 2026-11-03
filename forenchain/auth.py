@@ -221,6 +221,56 @@ def create_user(
         )
 
 
+DEMO_USERS_SECRET = "FORENCHAIN_DEMO_USERS"
+
+
+def seed_demo_users(demo_users) -> int:
+    """Create the demo accounts listed in Streamlit Secrets, but only on an empty database.
+
+    Each entry is a mapping with username, role and password. Demo accounts do not
+    get the forced password change, so the logins work straight after a restart,
+    reboot or redeploy. Once any account exists this does nothing, so records and
+    passwords changed later are never overwritten. Returns the number created.
+    """
+    entries = []
+    for entry in demo_users or []:
+        username = str(entry.get("username", "")).strip()
+        role = str(entry.get("role", "")).strip()
+        password = str(entry.get("password", ""))
+        if not username:
+            raise ValueError("Every demo user needs a username.")
+        if role not in ROLES:
+            raise ValueError(f"Demo user '{username}' has an invalid role.")
+        _validate_password(password)
+        entries.append((username, password, role))
+
+    if not entries:
+        return 0
+
+    if sum(1 for _, _, role in entries if role == "System Administrator") > 1:
+        raise ValueError("Demo users may include only one System Administrator.")
+
+    initialize_auth_database()
+
+    with sqlite3.connect(DATABASE_PATH) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+
+        existing = connection.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        if existing:
+            return 0
+
+        for username, password, role in entries:
+            _insert_user(
+                connection,
+                username,
+                password,
+                role,
+                must_change_password=False,
+            )
+
+    return len(entries)
+
+
 def authenticate_user(username: str, password: str):
     initialize_auth_database()
 
